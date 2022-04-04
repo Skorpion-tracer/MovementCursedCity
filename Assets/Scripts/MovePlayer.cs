@@ -51,7 +51,8 @@ public class MovePlayer : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0))
         {
-            var hits = Physics.RaycastAll(_camera.ScreenPointToRay(Input.mousePosition));
+            RaycastHit[] hits = new RaycastHit[1];
+            Physics.RaycastNonAlloc(_camera.ScreenPointToRay(Input.mousePosition), hits, float.MaxValue);
             if (hits.Length == 0)
             {
                 return;
