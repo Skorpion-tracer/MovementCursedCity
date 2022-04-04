@@ -1,4 +1,3 @@
-using System.Linq;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -14,6 +13,7 @@ public class MovePlayer : MonoBehaviour
     [SerializeField] private TypeMove _typeMove = TypeMove.Click;
     [SerializeField] private NavMeshAgent _navMeshAgent;
     [SerializeField] private float _speed = 5;
+    [SerializeField] private AnimationPlayer _animation;
 
     private Camera _camera;
 
@@ -21,6 +21,7 @@ public class MovePlayer : MonoBehaviour
     {
         _camera = Camera.main;
         _navMeshAgent = GetComponent<NavMeshAgent>();
+        _animation = GetComponent<AnimationPlayer>();
 
         _navMeshAgent.speed = _speed;
     }
@@ -45,6 +46,15 @@ public class MovePlayer : MonoBehaviour
 
         transform.Translate(Vector3.forward * vertical * _speed * Time.deltaTime);
         transform.Translate(Vector3.right * horizontal * _speed * Time.deltaTime);
+
+        if (vertical != 0 || horizontal != 0)
+        {
+            _animation.Walk();
+        }
+        else
+        {
+            _animation.Idle();
+        }
     }
 
     private void MoveClick()
@@ -61,9 +71,12 @@ public class MovePlayer : MonoBehaviour
             if (hits[0].collider.TryGetComponent<Ground>(out _))
             {
                 _navMeshAgent.destination = hits[0].point;
-
-                Debug.Log(hits[0].point);
+                _animation.Walk();
             }
+        }
+        else
+        {
+            _animation.Idle();
         }
     }
 }
