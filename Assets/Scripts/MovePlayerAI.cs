@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
@@ -18,13 +17,10 @@ public class MovePlayerAI : MonoBehaviour
     [SerializeField] private float _viewRadius = 15;                   
     [SerializeField] private float _viewAngle = 90;                    
     [SerializeField] private LayerMask _wishMask;
-    [SerializeField] private LayerMask _obstacleMask;                  
-    [SerializeField] private Transform[] _waypoints;                   
+    [SerializeField] private LayerMask _obstacleMask;
 
-    private int _currentWaypointIndex;                     
-
-    private Vector3 _targetLastPosition = Vector3.zero;    
-    private Vector3 _targetPosition;                       
+    private Vector3 _targetLastPosition = Vector3.zero;
+    private Vector3 _targetPosition;
     private WishCharacter _targetWish;
     private HashSet<WishCharacter> _placesToVisit;
     private HashSet<WishCharacter> _foundDesires;
@@ -49,7 +45,6 @@ public class MovePlayerAI : MonoBehaviour
         _waitTimeToMove = _delayToMove;
         _timeToRotateDelay = _timeToRotate;
 
-        _currentWaypointIndex = 0;
         _navMeshAgent = GetComponent<NavMeshAgent>();
         _placesToVisit = new HashSet<WishCharacter>();
         _placesVisited = new List<WishCharacter>();
@@ -57,7 +52,7 @@ public class MovePlayerAI : MonoBehaviour
 
         _navMeshAgent.isStopped = false;
         _navMeshAgent.speed = _speedWalk;
-        _navMeshAgent.SetDestination(_waypoints[_currentWaypointIndex].position);
+        _navMeshAgent.SetDestination(GenericPoint(transform));
     }
 
     private void Update()
@@ -102,14 +97,15 @@ public class MovePlayerAI : MonoBehaviour
             {
                 _isPatrol = true;
                 _targetNear = false;
+
                 Move(_speedWalk);
+
                 _timeToRotateDelay = _timeToRotate;
                 _caughtTarget = true;
                 _waitTime = _timeToCollectWishes;
-                _navMeshAgent.SetDestination(_waypoints[_currentWaypointIndex].position);
+                _navMeshAgent.SetDestination(GenericPoint(transform));
                 _targetWish.gameObject.GetComponent<Collider>().enabled = false;
                 _foundDesires.Add(_targetWish);
-                NextPoint();
             }
             else
             {
@@ -137,12 +133,12 @@ public class MovePlayerAI : MonoBehaviour
         {
             _targetNear = false;
             _targetLastPosition = Vector3.zero;
-            _navMeshAgent.SetDestination(_waypoints[_currentWaypointIndex].position);
+            _navMeshAgent.SetDestination(GenericPoint(transform));
             if (_navMeshAgent.remainingDistance <= _navMeshAgent.stoppingDistance)
             {
                 if (_waitTimeToMove <= 0)
                 {
-                    NextPoint();
+                    _navMeshAgent.SetDestination(GenericPoint(transform));
                     Move(_speedWalk);
                     _waitTimeToMove = _delayToMove;
                 }
@@ -155,10 +151,18 @@ public class MovePlayerAI : MonoBehaviour
         }
     }
 
-    private void NextPoint()
+    public Vector3 GenericPoint(Transform agent)
     {
-        _currentWaypointIndex = (_currentWaypointIndex + 1) % _waypoints.Length;
-        _navMeshAgent.SetDestination(_waypoints[_currentWaypointIndex].position);
+        Vector3 result;
+
+        var dis = Random.Range(50, 80);
+        var randomPoint = Random.insideUnitSphere * dis;
+
+        NavMesh.SamplePosition(agent.position + randomPoint,
+            out var hit, dis, NavMesh.AllAreas);
+        result = hit.position;
+
+        return result;
     }
 
     private void Stop()
@@ -184,7 +188,8 @@ public class MovePlayerAI : MonoBehaviour
             {
                 _targetNear = false;
                 Move(_speedWalk);
-                _navMeshAgent.SetDestination(_waypoints[_currentWaypointIndex].position);
+                //_navMeshAgent.SetDestination(_waypoints[_currentWaypointIndex].position);
+                _navMeshAgent.SetDestination(GenericPoint(transform));
                 _waitTime = _timeToCollectWishes;
                 _timeToRotateDelay = _timeToRotate;
             }
