@@ -10,7 +10,6 @@ public class MovePlayerAI : MonoBehaviour
     [SerializeField] private float _delayToMove = 0.7f;
     [SerializeField] private float _speedRun = 10;
     [SerializeField] private float _timeToCollectWishes = 2;
-    [SerializeField] private float _timeToRotate = 2;
     [SerializeField] private float _speedWalk = 6;
     [SerializeField] private float _distanceToCollectWishes = 10;
                      
@@ -19,7 +18,6 @@ public class MovePlayerAI : MonoBehaviour
     [SerializeField] private LayerMask _wishMask;
     [SerializeField] private LayerMask _obstacleMask;
 
-    private Vector3 _targetLastPosition = Vector3.zero;
     private Vector3 _targetPosition;
     private WishCharacter _targetWish;
     private HashSet<WishCharacter> _placesToVisit;
@@ -27,23 +25,20 @@ public class MovePlayerAI : MonoBehaviour
     private List<WishCharacter> _placesVisited;
 
     private float _waitTime;                               
-    private float _waitTimeToMove;                         
-    private float _timeToRotateDelay;                      
-    private bool _targetInRange;                           
-    private bool _targetNear;                              
+    private float _waitTimeToMove;                    
+    private bool _targetInRange;
     private bool _isPatrol;                                
     private bool _caughtTarget;
 
     private void Start()
     {
-        _targetPosition = Vector3.zero;
+        _targetPosition = GenericPoint(transform);
         _isPatrol = true;
         _caughtTarget = false;
         _targetInRange = false;
-        _targetNear = false;
+
         _waitTime = _timeToCollectWishes;
         _waitTimeToMove = _delayToMove;
-        _timeToRotateDelay = _timeToRotate;
 
         _navMeshAgent = GetComponent<NavMeshAgent>();
         _placesToVisit = new HashSet<WishCharacter>();
@@ -52,7 +47,7 @@ public class MovePlayerAI : MonoBehaviour
 
         _navMeshAgent.isStopped = false;
         _navMeshAgent.speed = _speedWalk;
-        _navMeshAgent.SetDestination(GenericPoint(transform));
+        _navMeshAgent.SetDestination(_targetPosition);
     }
 
     private void Update()
@@ -81,9 +76,6 @@ public class MovePlayerAI : MonoBehaviour
             _caughtTarget = false;
         }
 
-        _targetNear = false;
-        _targetLastPosition = Vector3.zero;
-
         if (!_caughtTarget)
         {
             Move(_speedRun);
@@ -95,13 +87,10 @@ public class MovePlayerAI : MonoBehaviour
 
             if (_waitTime <= 0 && !_caughtTarget)
             {
-                _isPatrol = true;
-                _targetNear = false;
-
                 Move(_speedWalk);
 
-                _timeToRotateDelay = _timeToRotate;
                 _caughtTarget = true;
+                _isPatrol = true;
                 _waitTime = _timeToCollectWishes;
                 _navMeshAgent.SetDestination(GenericPoint(transform));
                 _targetWish.gameObject.GetComponent<Collider>().enabled = false;
@@ -116,37 +105,18 @@ public class MovePlayerAI : MonoBehaviour
 
     private void Patroling()
     {
-        if (_targetNear)
+        if (_navMeshAgent.remainingDistance <= _navMeshAgent.stoppingDistance)
         {
-            if (_timeToRotateDelay <= 0)
+            if (_waitTimeToMove <= 0)
             {
                 Move(_speedWalk);
-                LookingPlayer(_targetLastPosition);
+                _waitTimeToMove = _delayToMove;
+                _navMeshAgent.SetDestination(GenericPoint(transform));
             }
             else
             {
                 Stop();
-                _timeToRotateDelay -= Time.deltaTime;
-            }
-        }
-        else
-        {
-            _targetNear = false;
-            _targetLastPosition = Vector3.zero;
-            _navMeshAgent.SetDestination(GenericPoint(transform));
-            if (_navMeshAgent.remainingDistance <= _navMeshAgent.stoppingDistance)
-            {
-                if (_waitTimeToMove <= 0)
-                {
-                    _navMeshAgent.SetDestination(GenericPoint(transform));
-                    Move(_speedWalk);
-                    _waitTimeToMove = _delayToMove;
-                }
-                else
-                {
-                    Stop();
-                    _waitTimeToMove -= Time.deltaTime;
-                }
+                _waitTimeToMove -= Time.deltaTime;
             }
         }
     }
@@ -155,7 +125,7 @@ public class MovePlayerAI : MonoBehaviour
     {
         Vector3 result;
 
-        var dis = Random.Range(50, 80);
+        var dis = Random.Range(10, 50);
         var randomPoint = Random.insideUnitSphere * dis;
 
         NavMesh.SamplePosition(agent.position + randomPoint,
@@ -177,28 +147,6 @@ public class MovePlayerAI : MonoBehaviour
         _navMeshAgent.isStopped = false;
         _navMeshAgent.speed = speed;
         _animation.Walk();
-    }
-
-    private void LookingPlayer(Vector3 target)
-    {
-        _navMeshAgent.SetDestination(target);
-        if (Vector3.Distance(transform.position, target) <= 0.3)
-        {
-            if (_waitTime <= 0)
-            {
-                _targetNear = false;
-                Move(_speedWalk);
-                //_navMeshAgent.SetDestination(_waypoints[_currentWaypointIndex].position);
-                _navMeshAgent.SetDestination(GenericPoint(transform));
-                _waitTime = _timeToCollectWishes;
-                _timeToRotateDelay = _timeToRotate;
-            }
-            else
-            {
-                Stop();
-                _waitTime -= Time.deltaTime;
-            }
-        }
     }
 
     private void EnviromentView()
